@@ -1,0 +1,241 @@
+# Script created by Elisa Abbad (eeabbad@gmail.com) # 
+# Load required packages ####
+library(rgdal)
+library(raster)
+library(tidyverse)
+library(ggplot2)
+library(sf)
+library(ggmap)
+library(ggplot2)
+library(raster)
+library(maptools)
+terr<-read.csv("Esse - Terrestrial.csv")
+mar<-read.csv("Esse - Marine.csv")
+#ecoregions shapefile
+marineEco<-readOGR("Shapefiles/meow_ecos.shp")
+terrestrialEco<-readOGR("Shapefiles/wwf_terr_ecos.shp")
+
+
+# Monitoring programs compared to land use changes ####
+
+## 1 - Compare 1985 with 2022 and check if monitoring programs are well distributed in areas relative to changes/no changes in land use
+
+
+# quantos % da área natural for convertida
+# quantos % dos programas de monitoramento contempla esta mudança
+# se a distribuição dos programas fosse aleatória, seria similar ao que temos (o mesmo % de áreas sem mudança)?
+
+
+
+#####Figures####
+#Figura pontos
+points<-read.csv("Planilha.filtered - Página5 (1).csv")
+points
+mundo<-readOGR("Mapa_paises_mundo.shp")
+mundo.sf<-st_as_sf(mundo)
+points$Site.Latitude<-as.numeric(points$Site.Latitude)
+points$Site.Longitude<-as.numeric(points$Site.Longitude)
+shape.mundo<-ggplot(data = mundo.sf) +
+  geom_sf() +
+  coord_sf(xlim = c(-130, 0), ylim = c(-80,60), expand = FALSE)+ borders(fill="light grey") + labs(title = "Neotropical Monitoring Projects",y = 'Latitude', x = "Longitude")
+shape.mundo+ geom_point(data=points, aes(x=Site.Longitude,y=Site.Latitude),bg="#006ba6",col="#006ba6", alpha=0.3, pch=21, cex=2.5)
+points[!is.na(points$Site.Latitude),]
+nrow(points[!is.na(points$Site.Longitude),])
+unique(points$COUNTRY)
+unique(points$Network.Name)
+
+
+####Figura grupos#####
+dados_proporcoes <- data.frame(
+  Nome = c(
+    "Zooplankton", "Reptiles","Plants", "Plankton", "Microorganisms","Mammals","Macroinvertebrates","Invertebrates","Insects","Fungus","Fishes","Crustaceans","Corals","Birds","Benthos","Arthropods","Amphibians"), # Substitua com seus nomes
+  
+  Proporcao = c(1,34,94,3,3,84,20,2,36,8,32,2,14,62,5,4,21)  # Substitua com suas proporções
+)
+dados_proporcoes
+
+# Defina a ordem de cores desejada
+ordem_cores <- c(
+  "#0096c7", "#0096c7", "#0096c7", "#0096c7", "#0096c7", "#0096c7", "#0096c7",
+  "#0466c8", "#0466c8", "#0466c8", "#0466c8", "#0466c8", "#0466c8",
+  "#023e8a", "#023e8a", "#023e8a", "#023e8a", "#023e8a", "#023e8a"
+)
+
+# Crie o gráfico com as cores personalizadas e sem legenda
+ggplot(data = dados_proporcoes) +
+  geom_bar(aes(x = Nome, y = Proporcao, fill = Nome), color = "white", stat = "identity", show.legend = FALSE) +
+  coord_flip() +
+  scale_fill_manual(values = ordem_cores) +  # Defina as cores manualmente
+  labs(y = "Monitoring Projects", x = "Groups") +
+  theme_classic()
+
+######Figura tempo####
+tempo<-read.csv("tempo.csv")
+tempo$Número
+tempo$Valor
+tempo <- tempo %>% arrange(desc(Ano))
+tempo
+library(ggplot2)
+tempo$Número<-as.character(tempo$Número)
+
+x11()
+teste<-ggplot(tempo, aes(x =Valor , y = Número)) +
+  geom_line() +
+  geom_point(aes(color = Ano), size = 3) + scale_color_brewer(palette = "Set1", direction = -1) +
+  theme(legend.position = "bottom")+labs(title = "Time of Monitoring Projects",y = 'Projects', x = "Years")
+library(dplyr)
+plot(teste)
+tempo <- tempo %>% arrange(desc(Valor))
+x11()
+ggplot(tempo, aes(x = Valor)) +
+  geom_density(fill = "#0d68af", alpha = 0.5) +
+  labs(title = "Distribution",
+       x = "Year",
+       y = "Density of projects") 
+
+####Figura ecoregiões#####
+
+shapefile <- st_read("testeeco.shp")
+# Unir o shapefile com a tabela contendo os dados dos projetos
+shapefile <- merge(shapefile, contagem1, by.x = "ECO_NAME", by.y = "ECO_NAME")
+library(rnaturalearth)
+# Carregar dados dos países
+world <- ne_countries(scale = "medium", returnclass = "sf")
+x11()
+mapa <- ggplot() +
+  geom_sf(data = shapefile, aes(fill =log_contagem,color = "transparent")) +
+  geom_sf(data = world, fill = NA, color = "gray", size = 0.5) +
+  scale_fill_gradientn(colors = c("#0D0887", "#6A00A8", "#B12A90", "#E16462", "#FCA636", "#F0F921")) +
+  labs(title = "Number of Projects per Ecoregion", fill = "") +
+  theme_bw() +
+  coord_sf(xlim = c(-120, 10), ylim = c(-60, 50)) +
+  theme(panel.border = element_blank())
+print(mapa)
+
+###########Simulação######
+
+# Load the 'unmarked' package for analysis
+library(unmarked)
+
+# Set parameters for simulation
+n <- 30    # number of sites ta, aqui eu to vendo o numero de locais
+time <- 50 # years of observation aqui o tempo que quero que rode
+
+oc <- 0.8   # Initial occupancy aqui a colonização
+imig <- 0.5 # Immigration rate aqui a taxa de imigração
+ext1 <- 0.5/0.4 - 0.5 # Extinction rate to reduce occupancy to 0.4 e a taxa de extinção necessária para reduzir a ocupação para 0.4
+
+# Create matrices to store results
+#aqui tu cria a matriz vazia do tempo 50 e temp5, com 999 linhas pq vai rodar 999 vezes e 4 colunas que são as taxas
+#pcoefsMat50 <- matrix(NA, 999, 4)
+#pcoefsMat5 <- matrix(NA, 999, 4)
+
+resu<-list()
+parms<-data.frame(year.init=c(1,1,2,2),year.end=c(50,5,50,6))
+nruns<-999
+
+for(k in 1:nrow(parms)){
+  
+  pcoefsMat <- matrix(NA, nruns, 4)
+  
+  # Loop through simulations
+  for (j in 1:nruns) {
+    print(j) #o print é pra aparecer o que ta acontecendo
+    
+    # Create empty matrix to store species occurrences
+    ocseq <- matrix(NA, n, time)
+    #o oqseq é uma matriz vazia igual a de cima
+    
+    # Simulate species occurrences for the first years at all sites
+    #aqui tu vai colocar dentro do oqsec o primeiro ano de ocorrencia
+    #é tipo a base que a analise tem pra fazer o resto da simulação, então tem que fazer com e sem esse oqseq
+    ocseq[, 1] <-rbinom(n, 1, oc)
+    
+    # Simulate species occurrences for subsequent years
+    #que no caso ta sendo feito aqui
+    for (i in 2:time) {
+      probs <- ocseq[, i - 1] * (1 - ext1) + (1 - ocseq[, i - 1]) * imig
+      ocseq[, i] <- rbinom(n, 1, probs)
+    }
+    
+    
+    #Analysis block####
+    init <- parms[k,1]
+    end<-parms[k,2]
+    
+    ocseq2.red <- ocseq[, init:end]
+    # umf <- unmarkedMultFrame(y = ocseq2.red, numPrimary = end-init+1)
+    # 
+    # # Perform occupancy-extinction model for the reduced data
+    # resu <- colext(~1, ~1, ~1, ~1, umf)
+    # coefs <- coef(resu)
+    # 
+    # # Transform coefficients using logistic function
+    # pcoefs <- plogis(coefs)
+    
+    # Store results in matrices
+    #pcoefsMat[j, ] <- pcoefs
+    
+    oc.est<-mean(ocseq2.red[,1])
+    ex.est<-sum((ocseq2.red[,-1]==0)&(ocseq2.red[,-ncol(ocseq2.red)]==1))/sum((ocseq2.red[,-ncol(ocseq2.red)]==1))
+    col.est<-sum((ocseq2.red[,-1]==1)&(ocseq2.red[,-ncol(ocseq2.red)]==0))/sum((ocseq2.red[,-ncol(ocseq2.red)]==0))
+    
+    
+    pcoefsMat[j, ] <- c(oc.est,ex.est,col.est,1)
+    
+    
+    #End of analysis block####
+    
+    
+  }
+  
+  resu[k]<-list(pcoefsMat)
+  
+  
+  
+}
+resu
+create_histogram <- function(data, x, title, x_intercept) {
+  ggplot(data, aes(x = x)) +
+    geom_histogram(binwidth = 0.05, fill = "#4FC9AA", color = "white", alpha = 0.7) +
+    geom_vline(xintercept = x_intercept, lwd = 0.5, col = "#0a0908", linetype = "dashed") +
+    xlim(0, 1) +
+    labs(title = title, x = "Value", y = "Frequency") +
+    theme_classic()
+}
+library(ggplot2)
+# Criar os histogramas usando a função personalizada
+data
+resu
+data<-resu[[4]]
+data
+resu
+View(data)
+x11()
+histogramas <- list(
+  create_histogram(data.frame(x = data[, 1]), x = x, title = "Initial occupancy rate", x_intercept = oc),
+  create_histogram(data.frame(x = data[, 2]), x = x, title = "Extinction", x_intercept = ext1),
+  create_histogram(data.frame(x = data[, 3]), x = x, title = "Imigration", x_intercept = imig),
+  create_histogram(data.frame(x = data[, 4] / (data[, 2] + data[, 3])), x = x, title = " imig / (ext1 + imig)", x_intercept = imig / (ext1 + imig))
+)
+
+# Organizar e imprimir os histogramas
+gridExtra::grid.arrange(grobs = histogramas, ncol = 2)
+#########
+
+# Calculate and display summary statistics
+colMeans(pcoefsMat50, na.rm = TRUE)
+colMeans(pcoefsMat5, na.rm = TRUE)
+mean(pcoefsMat50[, 2] / (pcoefsMat50[, 2] + pcoefsMat50[, 3]), na.rm = TRUE)
+mean(pcoefsMat5[, 2] / (pcoefsMat5[, 2] + pcoefsMat5[, 3]), na.rm = TRUE)
+
+# Acessar os resultados para todos os parâmetros
+for (k in 1:length(resu)) {
+  print(paste("Resultados para parâmetro", k))
+  print(resu[[k]])
+}
+
+
+
+
+
