@@ -1,3 +1,4 @@
+#######Analysis ######
 # Script created by Elisa Abbad (eeabbad@gmail.com) # 
 # Load required packages ####
 library(rgdal)
@@ -9,22 +10,12 @@ library(ggmap)
 library(ggplot2)
 library(raster)
 library(maptools)
+library(terra)
 terr<-read.csv("Esse - Terrestrial.csv")
 mar<-read.csv("Esse - Marine.csv")
 #ecoregions shapefile
 marineEco<-readOGR("Shapefiles/meow_ecos.shp")
 terrestrialEco<-readOGR("Shapefiles/wwf_terr_ecos.shp")
-
-
-# Monitoring programs compared to land use changes ####
-
-## 1 - Compare 1985 with 2022 and check if monitoring programs are well distributed in areas relative to changes/no changes in land use
-
-
-# quantos % da área natural for convertida
-# quantos % dos programas de monitoramento contempla esta mudança
-# se a distribuição dos programas fosse aleatória, seria similar ao que temos (o mesmo % de áreas sem mudança)?
-
 
 
 #####Figures####
@@ -45,23 +36,21 @@ unique(points$COUNTRY)
 unique(points$Network.Name)
 
 
-####Figura grupos#####
 dados_proporcoes <- data.frame(
   Nome = c(
     "Zooplankton", "Reptiles","Plants", "Plankton", "Microorganisms","Mammals","Macroinvertebrates","Invertebrates","Insects","Fungus","Fishes","Crustaceans","Corals","Birds","Benthos","Arthropods","Amphibians"), # Substitua com seus nomes
   
-  Proporcao = c(1,34,94,3,3,84,20,2,36,8,32,2,14,62,5,4,21)  # Substitua com suas proporções
-)
+  Proporcao = c(1,34,94,3,3,84,20,2,36,8,32,2,14,62,5,4,21)  
 dados_proporcoes
 
-# Defina a ordem de cores desejada
+
 ordem_cores <- c(
   "#0096c7", "#0096c7", "#0096c7", "#0096c7", "#0096c7", "#0096c7", "#0096c7",
   "#0466c8", "#0466c8", "#0466c8", "#0466c8", "#0466c8", "#0466c8",
   "#023e8a", "#023e8a", "#023e8a", "#023e8a", "#023e8a", "#023e8a"
 )
 
-# Crie o gráfico com as cores personalizadas e sem legenda
+
 ggplot(data = dados_proporcoes) +
   geom_bar(aes(x = Nome, y = Proporcao, fill = Nome), color = "white", stat = "identity", show.legend = FALSE) +
   coord_flip() +
@@ -69,7 +58,7 @@ ggplot(data = dados_proporcoes) +
   labs(y = "Monitoring Projects", x = "Groups") +
   theme_classic()
 
-######Figura tempo####
+
 tempo<-read.csv("tempo.csv")
 tempo$Número
 tempo$Valor
@@ -93,13 +82,13 @@ ggplot(tempo, aes(x = Valor)) +
        x = "Year",
        y = "Density of projects") 
 
-####Figura ecoregiões#####
+
 
 shapefile <- st_read("testeeco.shp")
-# Unir o shapefile com a tabela contendo os dados dos projetos
+
 shapefile <- merge(shapefile, contagem1, by.x = "ECO_NAME", by.y = "ECO_NAME")
 library(rnaturalearth)
-# Carregar dados dos países
+
 world <- ne_countries(scale = "medium", returnclass = "sf")
 x11()
 mapa <- ggplot() +
@@ -112,7 +101,7 @@ mapa <- ggplot() +
   theme(panel.border = element_blank())
 print(mapa)
 
-###########Simulação######
+###########Simulation######
 
 # Load the 'unmarked' package for analysis
 library(unmarked)
@@ -126,7 +115,7 @@ imig <- 0.5 # Immigration rate aqui a taxa de imigração
 ext1 <- 0.5/0.4 - 0.5 # Extinction rate to reduce occupancy to 0.4 e a taxa de extinção necessária para reduzir a ocupação para 0.4
 
 # Create matrices to store results
-#aqui tu cria a matriz vazia do tempo 50 e temp5, com 999 linhas pq vai rodar 999 vezes e 4 colunas que são as taxas
+
 #pcoefsMat50 <- matrix(NA, 999, 4)
 #pcoefsMat5 <- matrix(NA, 999, 4)
 
@@ -147,12 +136,11 @@ for(k in 1:nrow(parms)){
     #o oqseq é uma matriz vazia igual a de cima
     
     # Simulate species occurrences for the first years at all sites
-    #aqui tu vai colocar dentro do oqsec o primeiro ano de ocorrencia
-    #é tipo a base que a analise tem pra fazer o resto da simulação, então tem que fazer com e sem esse oqseq
+  
     ocseq[, 1] <-rbinom(n, 1, oc)
     
     # Simulate species occurrences for subsequent years
-    #que no caso ta sendo feito aqui
+
     for (i in 2:time) {
       probs <- ocseq[, i - 1] * (1 - ext1) + (1 - ocseq[, i - 1]) * imig
       ocseq[, i] <- rbinom(n, 1, probs)
@@ -203,8 +191,8 @@ create_histogram <- function(data, x, title, x_intercept) {
     labs(title = title, x = "Value", y = "Frequency") +
     theme_classic()
 }
-library(ggplot2)
-# Criar os histogramas usando a função personalizada
+
+
 data
 resu
 data<-resu[[4]]
@@ -219,7 +207,7 @@ histogramas <- list(
   create_histogram(data.frame(x = data[, 4] / (data[, 2] + data[, 3])), x = x, title = " imig / (ext1 + imig)", x_intercept = imig / (ext1 + imig))
 )
 
-# Organizar e imprimir os histogramas
+
 gridExtra::grid.arrange(grobs = histogramas, ncol = 2)
 #########
 
@@ -229,12 +217,323 @@ colMeans(pcoefsMat5, na.rm = TRUE)
 mean(pcoefsMat50[, 2] / (pcoefsMat50[, 2] + pcoefsMat50[, 3]), na.rm = TRUE)
 mean(pcoefsMat5[, 2] / (pcoefsMat5[, 2] + pcoefsMat5[, 3]), na.rm = TRUE)
 
-# Acessar os resultados para todos os parâmetros
+
 for (k in 1:length(resu)) {
   print(paste("Resultados para parâmetro", k))
   print(resu[[k]])
 }
 
+library(raster)
+year1985<-raster("brasil_coverage_1985.tif")
+year2021<-raster("brasil_coverage_2021.tif")
+
+
+ncells<-24599016701
+
+get<-sample(ncells,15000)
+
+check<-year1985[get]
+check2<-year2021[get]
+
+check[check==0]<-NA
+check2[check2==0]<-NA
+
+forest1985<-check%in%c(1,3,4,5,49,10,11,12,32,29,50,13)
+forest2021<-check2%in%c(1,3,4,5,49,10,11,12,32,29,50,13)
+
+mean(forest1985[!is.na(check)])
+mean(forest2021[!is.na(check2)])
+
+mean((forest1985&!forest2021)[!is.na(check2)])
+
+
+mean(forest2021[!is.na(check2)])
+
+####
+
+ucoords<-unique(coords)
+year1985.monitoring<-extract(year1985,ucoords[,2:1])
+year2021.monitoring<-extract(year2021,ucoords[,2:1])
+
+year1985.monitoring[year1985.monitoring==33]<-NA
+year2021.monitoring[year2021.monitoring==33]<-NA
+
+forest1985.monitoring<-year1985.monitoring%in%c(1,3,4,5,49,10,11,12,32,29,50,13)
+forest2021.monitoring<-year2021.monitoring%in%c(1,3,4,5,49,10,11,12,32,29,50,13)
+
+mean((forest1985.monitoring&!forest2021.monitoring)[!is.na(year1985.monitoring)])
+
+mean(forest2021.monitoring[!is.na(year2021.monitoring)])
+
+
+projectsData2$Site.Latitude
+
+
+pacman::p_load(lwgeom)              # dependency
+pacman::p_load(tidyverse, sf, 
+               rnaturalearth, 
+               rnaturalearthdata)
+library(ggmap)
+library(ggplot2)
+library(raster)
+library(maptools)
+
+ecoshape<-readOGR("wwf_terr_ecos.shp")
+
+terr$Ecorregião2<-gsub("^ ","",terr$Ecorregião)
+
+terr$Ecorregião2%in%ecoshape$ECO_NAME
+
+ecoshape.cut<-ecoshape[ecoshape$ECO_NAME%in%terr$Ecorregião2,]
+plot(ecoshape.cut)
+
+
+coords<-data.frame(as.numeric(projectsData2$Site.Longitude),as.numeric(projectsData2$Site.Latitude))
+
+
+coords.unique<-unique(coords)
+
+
+
+coords.unique.ecor<-extract(ecoshape,coords.unique)
+
+area.eco<-aggregate(ecoshape$area_km2,list(ecoshape$ECO_NAME),sum)
+
+
+dim(coords.unique)
+dim(coords.unique.ecor)
+
+#number of studies in each ecorregion
+freq.econame<-table(coords.unique.ecor$ECO_NAME)
+area.econame<-area.eco[match(names(freq.econame),area.eco$Group.1),]
+
+
+plot(sort(freq.econame,decreasing = TRUE))
+
+
+plot(log(area.econame$x),log(freq.econame))
+summary(lm(log(freq.econame)~log(area.econame$x)))
+
+
+density.econame<-sum(freq.econame)/sum(area.econame$x)
+
+expectation.econame<-density.econame*area.econame$x
+
+sort(expectation.econame)
+
+expectation.econame[24]
+freq.econame[24]
+
+alldata<-cbind(freq.econame,area.econame,expectation.econame)
+
+alldata[order(alldata$expectation.econame),]
+
+# To obtain a p-value associated with this difference... to be continued
+# null model
+ecoshape.null<-ecoshape
+
+ecoshape.null$ECO_NAME<-sample(ecoshape.null$ECO_NAME)
+coords.unique.ecor<-extract(ecoshape.null,coords.unique)
+
+
+dim(coords.unique)
+dim(coords.unique.ecor)
+
+#number of studies in each ecorregion
+freq.econame<-table(coords.unique.ecor$ECO_NAME)
+
+
+library(raster)
+library(rgdal)
+coords<-read.csv("Planilha.filtered - coords (2).csv")
+View(coords)
+linhas_com_na <- apply(coords, 1, function(x) any(is.na(x)))
+coords[linhas_com_na, ]
+is.na(coords)
+files<-list.files(pattern = ".tif")
+Nfiles<-length(files)
+data_final<-matrix(NA,nrow=nrow(coords),ncol=Nfiles)
+dim(data_final)
+str(coords)
+coords$Site.Latitude<-as.numeric(coords$Site.Latitude)
+coords$Site.Longitude<-as.numeric(coords$Site.Longitude)
+coords.esse<-cbind(coords$Site.Longitude,coords$Site.Latitude)
+
+meanbin<-function(x){
+  mean(x>0,na.rm=TRUE)
+}
+sumbin<-function(x){
+  sum(x>0,na.rm=TRUE)
+}
+library(raster)
+for (i in 1:Nfiles) {
+  #  i=2
+  raster<-raster(files[i])
+  #plot(raster)
+  #points(coords[,])
+  data1<-raster::extract(raster,coords.esse,buffer=100)
+  
+  data1.1<-unlist(lapply(data1,sumbin ))
+  
+  data_final[,i]<-data1.1
+  print(i)
+}
+View(data_final)
+data1
+data_final
+
+
+colnames(data_final)<-files
+
+diferenciar<-gsub("^.{3}(.).*","\\1",files)
+loss<-data_final[,diferenciar=="l",drop=FALSE]
+gain<-data_final[,diferenciar=="g",drop=FALSE]
+soma.loss<-rowSums(loss,na.rm=TRUE)
+
+range(loss)
+range(soma.loss)
+
+
+#View(loss)
+soma.gain<-rowSums(gain,na.rm=TRUE)
+
+dim(loss)
+
+
+mean(soma.gain>0)
+
+
+mean(soma.loss>0)
+
+
+mean(soma.loss==0&soma.gain==0)
+
+######
+# Generate random coordinates within sampling area boundaries
+library(sf)
+install.packages("sp")
+library(sp)
+sam<-read_sf("Teste.shp")
+coords.sample <- sp::spsample(sam, 4000, type = "random")
+
+library(sf)
+
+
+num_points <- 4000
+
+
+library(lwgeom)
+library(sf)
+
+sam <- st_make_valid(sam)
+
+
+write_sf(sam, "testecerto.shp")
+
+
+sam1<-read_sf("testecerto.shp")
+
+
+coords.sample <- sf::st_sample(sam, num_points, type = "random")
+
+data_final.sample<-matrix(NA,nrow=length(coords.sample),ncol=Nfiles)
+
+for (i in 1:Nfiles) {
+  #  i=2
+  raster<-raster(files[i])
+  #plot(raster)
+  #points(coords[,])
+ 
+  coords.sp <- as(coords.sample, "Spatial")
+  
+
+  data1 <- extract(raster, coords.sp, buffer = 100)
+  
+  data1.1<-unlist(lapply(data1,sumbin ))
+  
+  data_final.sample[,i]<-data1.1
+  print(i)
+}
+
+colnames(data_final.sample)<-files
+
+
+diferenciar<-gsub("^.{3}(.).*","\\1",files)
+loss.sample<-data_final.sample[,diferenciar=="l",drop=FALSE]
+gain.sample<-data_final.sample[,diferenciar=="g",drop=FALSE]
+soma.loss.sample<-rowSums(loss.sample,na.rm=TRUE)
+soma.gain.sample<-rowSums(gain.sample,na.rm=TRUE)
+
+
+null<-{}
+
+for(i in 1:9999){
+  null[i]<-mean(soma.loss.sample[sample(4000,500)]==0&soma.gain.sample[sample(4000,500)]==0)
+}
+
+observed<-mean(soma.loss==0&soma.gain==0)
+hist(null,xlim=c(0.75,0.95))
+abline(v=observed,col=2)
+
+
+pvalue=1-sum((null<=observed)+1)/(length(null)+1)
+
+
+
+null<-rnorm(1000,95,1)
+hist(null)
+obs<-97
+
+(obs-mean(null))/sd(null)
+
+(sum(obs<=null)+1)/(length(null)+1)
+
+
+
+gravity<-read_sf("PNASGlobalGravity (2)/Total Gravity of Coral Reefs 1.0.shp")
+gravity$Grav_tot
+coords<-read.csv("Coords - Página1 (2).csv")
+
+e<-extent(-120, 10,-60, 50)
+
+st_is_valid(gravity)
+st_is_valid(e)
+gravity <- st_make_valid(gravity)
+e <- st_make_valid(e)
+
+
+
+gravity<-rasterize()
+e_valid <- st_as_sfc(st_bbox(e))
+
+gravity_crop<-st_crop(gravity,e)
+
+plot(gravity_crop)
+
+null_mean<- cbind.data.frame(ID_run=1:100,null_mean=NA)
+head(null_mean)
+
+i=1
+
+for (i in 1:100) {
+  
+  coords.sample<-sp::spsample(gravity_crop,4000,type = "random")
+  coords.sample<-as.data.frame(coords.sample)
+  
+  gravity_values2 <- extract(gravity_crop, coords.sample)
+  
+  null_mean[i,2]<-mean(gravity_values2$Grav_tot,na.rm=TRUE)
+  
+  
+  
+}
+null_mean
+null<-mean(null_mean$null_mean)
+hist(null_mean$null_mean)
+abline(v=observed,col=2)
+pvalue=1-(sum(null_mean$null_mean<=observed)+1)/(length(null_mean$null_mean)+1)
+
+pvalue=(sum(null_mean$null_mean>observed)+1)/(length(null_mean$null_mean)+1)
 
 
 
